@@ -1,25 +1,33 @@
 package co.zero.android.justjava;
 
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.NumberFormat;
 
 public class MainActivity extends AppCompatActivity {
-    private int cupsAmount = 0;
+    private int cupsAmount = 1;
     private int currentTurn = 0;
     private int cupPrice = 5;
     private boolean whippedCream;
+    private boolean chocolate;
+    private String customerName;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        displayPrice();
     }
 
     /**
@@ -27,22 +35,49 @@ public class MainActivity extends AppCompatActivity {
      */
     public void submitOrder(View view) {
         currentTurn++;
-        displayOrderInfo();
+        this.customerName = getCustomerName();
+        String orderInfo = buildOrderInfo();
+
+        Intent intent = new Intent(Intent.ACTION_SENDTO);
+        intent.setData(Uri.parse("mailto:"));
+        //intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"zerovirus23@gmail.com"});
+        intent.putExtra(Intent.EXTRA_SUBJECT, "JustJava Order for " + this.customerName);
+        intent.putExtra(Intent.EXTRA_TEXT, orderInfo);
+
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            Log.i(this.getClass().getSimpleName(), ":::::::::: Intent view resolved");
+            startActivity(intent);
+        }else{
+            Log.i(this.getClass().getSimpleName(), ":::::::::: Intent view NOT resolved");
+        }
     }
 
     public void increaseAmount(View view){
+        if(cupsAmount == 100){
+            Toast.makeText(this, "You cannot have more than 100 cups of coffee", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         cupsAmount++;
         displayQuantity();
         displayPrice();
     }
 
     public void decreaseAmount(View view){
-        if(cupsAmount > 0) {
-            cupsAmount--;
+        if(cupsAmount == 1){
+            Toast.makeText(this, "You cannot have less than 1 cups of coffee", Toast.LENGTH_SHORT).show();
+            return;
         }
 
+        cupsAmount--;
         displayQuantity();
         displayPrice();
+    }
+
+    private String getCustomerName(){
+        EditText customerView = (EditText) findViewById(R.id.customer_name_view);
+        return customerView.getText().toString();
     }
 
     /**
@@ -60,29 +95,44 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int getTotalPrice(){
-        return cupsAmount * cupPrice;
+        int totalCupPrice = cupPrice;
+
+        if(whippedCream){
+            totalCupPrice++;
+        }
+
+        if(chocolate){
+            totalCupPrice += 2;
+        }
+
+        return totalCupPrice * cupsAmount;
     }
 
     public void selectWhippedCream(View view){
         CheckBox checkBox = (CheckBox) view;
         whippedCream = checkBox.isChecked();
+        displayPrice();
     }
 
-    private void displayOrderInfo(){
-        TextView turnView = (TextView) findViewById(R.id.order_text_view);
+    public void selectChocolate(View view){
+        CheckBox checkBox = (CheckBox) view;
+        this.chocolate = checkBox.isChecked();
+        displayPrice();
+    }
 
+    private String buildOrderInfo(){
         StringBuffer orderInfo = new StringBuffer();
         orderInfo.append("===============================");
         orderInfo.append("\nORDER SUMMARY");
         orderInfo.append("\n===============================");
-        orderInfo.append("\nName: Hernán Tenjo");
+        orderInfo.append("\nName: " + customerName);
         orderInfo.append("\nQuantity: " + this.cupsAmount);
-        orderInfo.append("\nWhit Whipped Cream? : " + this.whippedCream);
+        orderInfo.append("\nWith Whipped Cream? : " + this.whippedCream);
+        orderInfo.append("\nWith Chocolate? : " + this.chocolate);
         orderInfo.append("\nTotal: " + NumberFormat.getCurrencyInstance().format(getTotalPrice()));
         orderInfo.append("\nThank you!!!");
         orderInfo.append("\nYour turn is: " + currentTurn);
         orderInfo.append("\n=============================");
-
-        turnView.setText(orderInfo.toString());
+        return orderInfo.toString();
     }
 }
